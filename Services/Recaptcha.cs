@@ -1,5 +1,6 @@
 ﻿
 using System.Text.Json.Nodes;
+using System.Net;
 
 namespace AS_Assignment_2.Services
 {
@@ -18,8 +19,9 @@ namespace AS_Assignment_2.Services
 
         public async Task<bool> VerifyReCaptchaV3(string response)
         {
+            var sanitizedResponse = WebUtility.HtmlEncode(response);
             var content = new MultipartFormDataContent();
-            content.Add(new StringContent(response), "response");
+            content.Add(new StringContent(sanitizedResponse), "response");
             content.Add(new StringContent(_secretKey), "secret");
 
             var result = await _httpClient.PostAsync(_verificationUrl, content);

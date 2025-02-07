@@ -1,0 +1,63 @@
+﻿@{
+    ViewData["Title"] = "Verify OTP";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h2 class="text-center mb-4">Two-Factor Authentication</h2>
+                    <div class="alert alert-info mb-4">
+                        <i class="bi bi-envelope-check me-2"></i>
+                        We've sent a verification code to
+                        <strong>@ViewBag.Email</strong>.
+                        <br>Check your inbox and enter the code below.
+                    </div>
+
+                    <form asp-action="VerifyOtp" method="post">
+                        <div class="mb-3">
+                            <label class="form-label">Enter verification code</label>
+                            <input type="text" class="form-control" name="otpCode"
+                                   placeholder="123456" required>
+                        </div>
+
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-shield-check"></i> Verify Code
+                            </button>
+                        </div>
+
+                        @if (ViewData.ModelState.ErrorCount > 0)
+                        {
+                            <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-exclamation-circle-fill me-2"></i>
+                                    <div>
+                                        @Html.ValidationSummary()
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        }
+                    </form>
+
+                    <div class="text-center mt-4">
+                        <small class="text-muted">
+                            Didn't receive the code?
+                            <form asp-action="ResendOtp" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-link p-0">Resend code</button>
+                            </form>
+                        </small>
+                    </div>
+                    @if (TempData["Message"] != null)
+                    {
+                        <div class="alert alert-warning" role="alert">
+                            @TempData["Message"]
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

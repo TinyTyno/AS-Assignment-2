@@ -1,0 +1,212 @@
+﻿@model ApplicationUser
+@{
+    ViewData["Title"] = "Create Account";
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-lg">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Create New Account</h3>
+                </div>
+                <div class="card-body">
+                    <form asp-action="Register" method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
+                        @Html.AntiForgeryToken()
+
+                        <div class="row">
+                            <!-- Personal Information -->
+                            <div class="col-md-6">
+                                <h5 class="mb-3 text-muted">Personal Information</h5>
+
+                                <div class="mb-3">
+                                    <label asp-for="FirstName" class="form-label"></label>
+                                    <input asp-for="FirstName" class="form-control" placeholder="John" />
+                                    <span asp-validation-for="FirstName" class="text-danger small"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="LastName" class="form-label"></label>
+                                    <input asp-for="LastName" class="form-control" placeholder="Doe" />
+                                    <span asp-validation-for="LastName" class="text-danger small"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="Email" class="form-label"></label>
+                                    <input asp-for="Email" class="form-control" placeholder="john.doe@example.com" />
+                                    <span asp-validation-for="Email" class="text-danger small"></span>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label asp-for="MobileNo" class="form-label"></label>
+                                    <div class="input-group">
+                                        <div class="input-group-prepend">
+                                            <span class="input-group-text phone-prefix">
+                                                <span class="flag-icon">🇸🇬</span>
+                                                +65
+                                            </span>
+                                        </div>
+                                        <input asp-for="MobileNo" class="form-control"
+                                               placeholder="9123 4567"
+                                               data-phone-format="+65 " />
+                                    </div>
+                                    <span asp-validation-for="MobileNo" class="text-danger small"></span>
+                                </div>
+                            </div>
+
+                            <!-- Account Security -->
+                            <div class="col-md-6">
+                                <h5 class="mb-3 text-muted">Account Security</h5>
+
+                                <div class="mb-3">
+                                    <label asp-for="Password" class="form-label"></label>
+                                    <input asp-for="Password" type="password" class="form-control"
+                                           placeholder="At least 12 characters" />
+                                    <span asp-validation-for="Password" class="text-danger small"></span>
+                                    <div class="progress mt-2" style="height: 5px;">
+                                        <div id="password-strength" class="progress-bar" role="progressbar"></div>
+                                    </div>
+                                    <small class="form-text text-muted">
+                                        Must contain uppercase, lowercase, number, and special character
+                                    </small>
+                                </div>
+
+                                <div class="mb-4">
+                                    <label asp-for="ConfirmPassword" class="form-label"></label>
+                                    <input asp-for="ConfirmPassword" type="password" class="form-control"
+                                           placeholder="Re-enter your password" />
+                                    <span asp-validation-for="ConfirmPassword" class="text-danger small"></span>
+                                </div>
+
+                                <h5 class="mb-3 text-muted">Payment Information</h5>
+                                <div class="mb-3">
+                                    <label asp-for="CreditCardNo" class="form-label"></label>
+                                    <div class="input-group">
+                                        <input asp-for="CreditCardNo" class="form-control"
+                                               placeholder="1234 5678 9012 3456"
+                                               data-card-type="unknown" />
+                                        <div class="input-group-append">
+                                            <span class="input-group-text bg-transparent border-0">
+                                                <img src="/images/visa.png" class="card-logo inactive" id="visa-logo"
+                                                     alt="Visa" title="Visa">
+                                                <img src="/images/mastercard.png" class="card-logo inactive"
+                                                     id="mastercard-logo" alt="Mastercard" title="Mastercard">
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <span asp-validation-for="CreditCardNo" class="text-danger small"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Address Section -->
+                        <div class="row mt-3">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="BillingAddress" class="form-label"></label>
+                                    <input asp-for="BillingAddress" class="form-control"
+                                           placeholder="Street address for billing" />
+                                    <span asp-validation-for="BillingAddress" class="text-danger small"></span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label asp-for="ShippingAddress" class="form-label"></label>
+                                    <input asp-for="ShippingAddress" class="form-control"
+                                           placeholder="Street address for delivery" />
+                                    <span asp-validation-for="ShippingAddress" class="text-danger small"></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Photo Upload -->
+                        <div class="mb-4">
+                            <label asp-for="Photo" class="form-label">Profile Photo</label>
+                            <div class="custom-file">
+                                <input asp-for="Photo" type="file" class="form-control"
+                                       accept="image/*" id="customFile">
+                                <label class="form-label small text-muted" for="customFile">
+                                    Max 5MB (JPG)
+                                </label>
+                                <span asp-validation-for="Photo" class="text-danger small"></span>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-person-plus"></i> Create Account
+                            </button>
+                            <div class="text-center mt-3">
+                                Already have an account?
+                                <a asp-action="Login" class="text-decoration-none">Login instead</a>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        $(document).ready(function() {
+            $('#Password').on('input', function() {
+                const password = $(this).val();
+                let strength = 0;
+
+                // Reset strength meter if empty
+                if (password === '') {
+                    $('#password-strength').css('width', '0%').removeClass('bg-danger bg-warning bg-success');
+                    return;
+                }
+
+                // Criteria checks
+                if (password.length >= 12) strength += 25;
+                if (/[A-Z]/.test(password)) strength += 25;
+                if (/[a-z]/.test(password)) strength += 25;
+                if (/[^A-Za-z0-9]/.test(password)) strength += 25;
+
+                // Update progress bar
+                const $bar = $('#password-strength');
+                $bar.css('width', strength + '%');
+
+                // Update color based on strength
+                if (strength < 50) {
+                    $bar.removeClass('bg-warning bg-success').addClass('bg-danger');
+                } else if (strength < 75) {
+                    $bar.removeClass('bg-danger bg-success').addClass('bg-warning');
+                } else {
+                    $bar.removeClass('bg-danger bg-warning').addClass('bg-success');
+                }
+            });
+        });
+
+        // Credit Card Logo Handling
+        document.getElementById('CreditCardNo').addEventListener('input', function(e) {
+            const value = e.target.value.replace(/\s/g, '');
+            const visaLogo = document.getElementById('visa-logo');
+            const mcLogo = document.getElementById('mastercard-logo');
+
+            // Visa: 16 digits starting with 4
+            const isVisa = /^4\d{15}$/.test(value);
+            // Mastercard: Complex pattern matching
+            const isMC = /^(5[1-5]\d{14}|222[1-9]\d{12}|2[3-6]\d{14}|27[01]\d{13}|2720\d{12})$/.test(value);
+
+            visaLogo.classList.toggle('inactive', !isVisa);
+            mcLogo.classList.toggle('inactive', !isMC);
+        });
+
+        // Updated Phone Number Formatting
+        document.getElementById('MobileNo').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/[^\d]/g, '');
+
+            if (value.startsWith('65')) value = value.substring(2);
+            if (value.length > 8) value = value.substring(0, 8);
+
+            let formatted = value.replace(/(\d{4})(\d{0,4})/, '$1 $2').trim();
+            e.target.value = formatted;
+        });
+    </script>
+}

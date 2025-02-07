@@ -1,0 +1,87 @@
+﻿@model UserLoginModel
+@{
+    ViewData["Title"] = "Login";
+}
+@inject IConfiguration configure
+@{
+    var siteKey = configure["GoogleRecaptchaConfig:SiteKey"];
+}
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow">
+                <div class="card-body">
+                    <h2 class="text-center mb-4">Welcome Back</h2>
+                    <form id="loginForm" asp-action="Login" method="post">
+                        <input type="hidden" id="recaptchaToken" name="RecaptchaToken" />
+
+                        <div class="mb-3">
+                            <label asp-for="Email" class="form-label">Email address</label>
+                            <input type="email" class="form-control" asp-for="Email"
+                                   placeholder="Enter your email" required>
+                            <span class="text-danger small" asp-validation-for="Email"></span>
+                        </div>
+
+                        <div class="mb-4">
+                            <label asp-for="Password" class="form-label">Password</label>
+                            <input type="password" class="form-control" asp-for="Password"
+                                   placeholder="Enter your password" required>
+                            <span class="text-danger small" asp-validation-for="Password"></span>
+                        </div>
+
+                        <div class="d-grid mb-3">
+                            <button type="submit" class="g-recaptcha btn btn-primary btn-lg"
+                                    data-sitekey="@siteKey"
+                                    data-callback='onSubmit'
+                                    data-action='submit'>
+                                <i class="bi bi-box-arrow-in-right"></i> Sign In
+                            </button>
+                        </div>
+
+                        <div class="text-center mb-3">
+                            <a asp-action="ResetPassword" class="text-decoration-none">Forgot Password?</a>
+                        </div>
+                        @if (User.Identity.IsAuthenticated)
+                        {
+                            <div class="text-center mt-2">
+                                <a asp-action="ChangePassword" class="text-decoration-none">Change Password</a>
+                            </div>
+                        }
+
+                        <div class="text-center">
+                            <span class="text-muted">Don't have an account? </span>
+                            <a asp-controller="Account" asp-action="Register"
+                               class="btn btn-outline-primary btn-sm">
+                                Create Account
+                            </a>
+                        </div>
+
+                        @if (ViewData.ModelState.ErrorCount > 0)
+                        {
+                            <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+                                <div class="d-flex align-items-center">
+                                    <i class="bi bi-exclamation-circle-fill me-2"></i>
+                                    <div>
+                                        @Html.ValidationSummary()
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        }
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://www.google.com/recaptcha/api.js?render=@siteKey"></script>
+    <script>
+        function onSubmit(token) {
+            document.getElementById("recaptchaToken").value = token;
+            document.getElementById("loginForm").submit();
+        }
+    </script>
+}

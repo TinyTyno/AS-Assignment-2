@@ -1,8 +1,109 @@
-﻿@{
+﻿@model ApplicationUser
+
+@{
     ViewData["Title"] = "Home Page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container mt-5">
+    <div class="text-center">
+        <h1 class="display-4 mb-4">Welcome to SecureApp</h1>
+
+        @if (Model != null)
+        {
+            <div class="card shadow-lg mx-auto" style="max-width: 600px;">
+                <div class="card-header bg-primary text-white">
+                    <h2 class="h4 mb-0">Your Profile</h2>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-4">
+                        <div class="col-md-4 text-center">
+                            <div class="avatar-container">
+                                @if (!string.IsNullOrEmpty(Model.PhotoPath))
+                                {
+                                    <img src="@Model.PhotoPath"
+                                         class="img-fluid rounded-circle shadow"
+                                         alt="Profile photo"
+                                         style="width: 120px; height: 120px; object-fit: cover;">
+                                }
+                                else
+                                {
+                                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center"
+                                         style="width: 120px; height: 120px;">
+                                        <i class="bi bi-person-fill text-white" style="font-size: 3rem;"></i>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                        <div class="col-md-8 text-start">
+                            <h3 class="h5">@Model.FirstName @Model.LastName</h3>
+                            <p class="text-muted mb-1">@Model.Email</p>
+                            <p class="text-muted">@Model.MobileNo</p>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="info-card mb-4">
+                                <h4 class="h6 text-muted mb-3"><i class="bi bi-credit-card me-2"></i>Payment Info</h4>
+                                <p class="mb-1">@Model.CreditCardNo</p>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="info-card mb-4">
+                                <h4 class="h6 text-muted mb-3"><i class="bi bi-geo-alt me-2"></i>Addresses</h4>
+                                <div class="mb-2">
+                                    <span class="text-muted">Billing:</span>
+                                    <p class="mb-0">@Model.BillingAddress</p>
+                                </div>
+                                <div>
+                                    <span class="text-muted">Shipping:</span>
+                                    <p class="mb-0">@Model.ShippingAddress</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="card shadow mx-auto" style="max-width: 500px;">
+                <div class="card-body">
+                    <h2 class="h5 mb-4">Access Your Account</h2>
+                    <p class="text-muted mb-4">
+                        Sign in to view your personalized dashboard and account details.
+                    </p>
+                    <div class="d-grid gap-2">
+                        <a asp-controller="Account" asp-action="Login"
+                           class="btn btn-primary btn-lg">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+                        </a>
+                        <p class="text-muted mt-3">
+                            New user?
+                            <a asp-controller="Account" asp-action="Register"
+                               class="text-decoration-none">
+                                Create an account
+                            </a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
 </div>
+
+<style>
+    .info-card {
+        padding: 1.25rem;
+        background-color: #f8f9fa;
+        border-radius: 0.5rem;
+        border: 1px solid #dee2e6;
+    }
+
+    .avatar-container {
+        margin: -60px auto 20px;
+        position: relative;
+        z-index: 1;
+    }
+</style>

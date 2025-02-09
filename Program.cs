@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Builder;
+using AS_Assignment_2.Controllers;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -81,7 +82,7 @@ var app = builder.Build();
 // Error handling middleware
 if (!app.Environment.IsDevelopment())
 {
-    app.UseExceptionHandler("/Error/StatusCode/500");
+    app.UseExceptionHandler("/Error/Exception");
     app.UseHsts();
 }
 else
@@ -89,7 +90,7 @@ else
     app.UseDeveloperExceptionPage();
 }
 
-// Handle HTTP status codes (e.g., 404, 403)
+// Handle HTTP status codes
 app.UseStatusCodePagesWithReExecute("/Error/StatusCode/{0}");
 
 app.UseHttpsRedirection();

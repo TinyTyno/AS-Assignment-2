@@ -9,6 +9,8 @@ using AS_Assignment_2.Models.AS_Assignment_2.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Newtonsoft.Json;
+using Ganss.Xss;
+
 
 namespace AS_Assignment_2.Controllers
 {
@@ -21,6 +23,8 @@ namespace AS_Assignment_2.Controllers
         private readonly RecaptchaService _recaptchaService;
         private readonly IEmailService _emailService;
         private readonly IConfiguration _configuration;
+        private readonly HtmlSanitizer _sanitizer = new HtmlSanitizer();
+
 
 
         public AccountController(
@@ -66,11 +70,12 @@ namespace AS_Assignment_2.Controllers
                     LastName = model.LastName,
                     CreditCardNo = _encryption.Encrypt(model.CreditCardNo),
                     MobileNo = model.MobileNo,
-                    BillingAddress = model.BillingAddress,
-                    ShippingAddress = model.ShippingAddress,
+                    BillingAddress = _sanitizer.Sanitize(model.BillingAddress),
+                    ShippingAddress = _sanitizer.Sanitize(model.ShippingAddress),
                     PhotoPath = model.Photo != null ? await SavePhoto(model.Photo) : null,
                     LastPasswordChangeDate = DateTime.UtcNow,
                 };
+                model.Password = _sanitizer.Sanitize(model.Password);
                 var passwordHash = _userManager.PasswordHasher.HashPassword(user, model.Password);
                 user.PreviousPasswords = JsonConvert.SerializeObject(new List<string> { passwordHash });
                 var result = await _userManager.CreateAsync(user, model.Password);
@@ -124,7 +129,8 @@ namespace AS_Assignment_2.Controllers
                     ModelState.AddModelError("", "Account locked");
                     return View(model);
                 }
-
+                
+                model.Password = _sanitizer.Sanitize(model.Password);
                 var isPasswordValid = await _userManager.CheckPasswordAsync(user, model.Password);
 
                 if (isPasswordValid)
@@ -169,6 +175,7 @@ namespace AS_Assignment_2.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> VerifyOtp(string otpCode)
         {
+            otpCode = _sanitizer.Sanitize(otpCode);
             var userId = HttpContext.Session.GetString("2faUserId");
             var is2faPending = HttpContext.Session.GetString("2faPending") == "true";
 
@@ -292,6 +299,9 @@ namespace AS_Assignment_2.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ChangePassword(ChangePasswordModel model)
         {
+            model.OldPassword = _sanitizer.Sanitize(model.OldPassword);
+            model.NewPassword = _sanitizer.Sanitize(model.NewPassword);
+
             var user = await _userManager.GetUserAsync(User);
 
             // Check minimum password age
@@ -350,6 +360,8 @@ namespace AS_Assignment_2.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResetPassword(ResetPasswordModel model)
         {
+            model.Email = _sanitizer.Sanitize(model.Email);
+
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user != null)
             {
@@ -386,6 +398,11 @@ namespace AS_Assignment_2.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResetPasswordConfirm(ResetPasswordConfirmModel model)
         {
+            model.Email = _sanitizer.Sanitize(model.Email);
+            model.Token = _sanitizer.Sanitize(model.Token);
+            model.NewPassword = _sanitizer.Sanitize(model.NewPassword);
+            model.ConfirmPassword = _sanitizer.Sanitize(model.ConfirmPassword);
+
             var user = await _userManager.FindByEmailAsync(model.Email);
             if (user == null)
             {
@@ -449,6 +466,9 @@ namespace AS_Assignment_2.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ForceChangePassword(ForceChangePasswordModel model)
         {
+            model.NewPassword = _sanitizer.Sanitize(model.NewPassword);
+            model.ConfirmPassword = _sanitizer.Sanitize(model.ConfirmPassword);
+
             var userId = HttpContext.Session.GetString("ForcePasswordChangeUserId");
             if (userId == null) return RedirectToAction("Login");
 

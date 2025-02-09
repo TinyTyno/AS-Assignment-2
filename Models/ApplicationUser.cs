@@ -63,4 +63,18 @@ namespace AS_Assignment_2.Models
 
         public string CurrentSessionId { get; set; }
     }
+
+    public static class CreditCardHelper
+    {
+        public static string MaskCreditCardNumber(string creditCardNumber)
+        {
+            if (string.IsNullOrEmpty(creditCardNumber) || creditCardNumber.Length < 4)
+            {
+                return creditCardNumber; // Return as is if it's null or too short
+            }
+
+            // Mask all but the last 4 digits
+            return new string('*', creditCardNumber.Length - 4) + creditCardNumber.Substring(creditCardNumber.Length - 4);
+        }
+    }
 }

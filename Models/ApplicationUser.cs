@@ -61,7 +61,7 @@ namespace AS_Assignment_2.Models
 
         public bool PasswordChangeRequired { get; set; }
 
-        public string CurrentSessionId { get; set; }
+        public string? CurrentSessionId { get; set; }
     }
 
     public static class CreditCardHelper

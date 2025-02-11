@@ -63,7 +63,7 @@ builder.Services.AddSession(options =>
     options.Cookie.HttpOnly = true;
     options.Cookie.IsEssential = true;
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    options.Cookie.SameSite = SameSiteMode.Strict;  
+    options.Cookie.SameSite = SameSiteMode.Strict;
 });
 
 // Add email service configuration
@@ -71,7 +71,7 @@ builder.Services.Configure<SendGridSettings>(
     builder.Configuration.GetSection("SendGridSettings"));
 builder.Services.AddScoped<IEmailService, SendGridEmailService>();
 
-// Add 2FA configuration
+
 builder.Services.AddControllersWithViews(options =>
 {
     options.Filters.Add(new AutoValidateAntiforgeryTokenAttribute());
@@ -211,21 +211,13 @@ app.Use(async (context, next) =>
     await next();
 });
 
-
 app.Use(async (context, next) =>
 {
     var path = context.Request.Path;
 
-    // Updated session key check
-    if (path.StartsWithSegments("/Account/ForceChangePassword") &&
-        !context.Session.TryGetValue("ForcePasswordChangeUserId", out _))
-    {
-        context.Response.Redirect("/Account/Login");
-        return;
-    }
-
-    // Keep existing ResetPasswordConfirm checks
-    if (path.StartsWithSegments("/Account/ResetPasswordConfirm"))
+    // Only check query parameters for GET requests
+    if (path.StartsWithSegments("/Account/ResetPasswordConfirm") &&
+        context.Request.Method == "GET")
     {
         if (string.IsNullOrEmpty(context.Request.Query["token"]) ||
             string.IsNullOrEmpty(context.Request.Query["email"]))

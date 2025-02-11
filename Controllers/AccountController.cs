@@ -61,7 +61,15 @@ namespace AS_Assignment_2.Controllers
         public async Task<IActionResult> Register(ApplicationUser model)
         {
             if (ModelState.IsValid)
-            {               
+            {
+                // Check if email already exists
+                var existingUser = await _userManager.FindByEmailAsync(model.Email);
+                if (existingUser != null)
+                {
+                    ModelState.AddModelError("Email", "This email address is already registered.");
+                    return View(model);
+                }
+
                 var user = new ApplicationUser
                 {
                     UserName = model.Email,
@@ -126,15 +134,19 @@ namespace AS_Assignment_2.Controllers
 
                 if (await _userManager.IsLockedOutAsync(user))
                 {
-                    ModelState.AddModelError("", "Account locked");
+                    ModelState.AddModelError("", $"Account locked. Try again in a while");
                     return View(model);
                 }
-                
+
                 model.Password = _sanitizer.Sanitize(model.Password);
                 var isPasswordValid = await _userManager.CheckPasswordAsync(user, model.Password);
-
+                Console.WriteLine("Check Password");
                 if (isPasswordValid)
                 {
+                    Console.WriteLine("Password Valid");
+                    // Reset failed attempts on successful password check
+                    await _userManager.ResetAccessFailedCountAsync(user);
+
                     // Generate and send OTP
                     var otpCode = GenerateOtp();
                     await _emailService.SendOtpEmailAsync(user.Email, otpCode);
@@ -144,10 +156,30 @@ namespace AS_Assignment_2.Controllers
                     HttpContext.Session.SetString("2faUserId", user.Id);
                     HttpContext.Session.SetString("2faPending", "true");
 
+                    HttpContext.Session.SetInt32("OtpAttempts", 0);
+
                     return RedirectToAction("VerifyOtp");
                 }
+                else
+                {
+                    Console.WriteLine("Password Invalid");
+                    // Increment failed attempts
+                    await _userManager.AccessFailedAsync(user);
 
-                ModelState.AddModelError("", "Invalid credentials");
+                    // Check if locked out after incrementing
+                    if (await _userManager.IsLockedOutAsync(user))
+                    {
+                        Console.WriteLine("Account locked");
+                        ModelState.AddModelError("", $"Account locked. Try again in {_configuration["PasswordPolicy:AccountLockoutTimeSpanMinutes"]} minutes");
+                    }
+                    else
+                    {
+                        Console.WriteLine("Account not locked");
+                        ModelState.AddModelError("", "Invalid credentials");
+                    }
+
+                    return View(model);
+                }
             }
             return View(model);
         }
@@ -178,15 +210,26 @@ namespace AS_Assignment_2.Controllers
             otpCode = _sanitizer.Sanitize(otpCode);
             var userId = HttpContext.Session.GetString("2faUserId");
             var is2faPending = HttpContext.Session.GetString("2faPending") == "true";
-
             if (userId == null || !is2faPending)
             {
+                return RedirectToAction("Login");
+            }
+
+            var attempts = HttpContext.Session.GetInt32("OtpAttempts") ?? 0;
+
+            // Enforce maximum attempts
+            if (attempts >= 3)
+            {
+                await ClearOtpAndSession(userId);
+                ModelState.AddModelError("", "Maximum OTP attempts exceeded. Please login again.");
                 return RedirectToAction("Login");
             }
 
             var isValid = await ValidateOtp(userId, otpCode);
             if (isValid)
             {
+                HttpContext.Session.Remove("OtpAttempts");
+
                 var user = await _userManager.FindByIdAsync(userId);
 
                 // Generate new session ID
@@ -211,7 +254,8 @@ namespace AS_Assignment_2.Controllers
                     HttpContext.Session.SetString("ForcePasswordChange", "true");
 
                     return RedirectToAction("ForceChangePassword");
-                } else
+                }
+                else
                 {
                     await _signInManager.SignInAsync(user, false);
 
@@ -220,12 +264,24 @@ namespace AS_Assignment_2.Controllers
                     HttpContext.Session.Remove("2faPending");
 
                     await LogActivity(user.Id, "Login");
-                    Console.WriteLine("-------------Redirecting to Home-----------------");
                     return RedirectToAction("Index", "Home");
                 }
             }
+            else
+            {
+                attempts++;
 
-            Console.WriteLine("-------------Not here plz-----------------");
+                if (attempts >= 3)
+                {
+                    await ClearOtpAndSession(userId);
+                    ModelState.AddModelError("", "Maximum OTP attempts exceeded. Please login again.");
+                    return RedirectToAction("Login");
+                }
+
+                HttpContext.Session.SetInt32("OtpAttempts", attempts);
+                ModelState.AddModelError("", $"Invalid OTP. {3 - attempts} attempt(s) remaining.");
+            }
+
             ModelState.AddModelError("", "Invalid or expired OTP code");
             return View();
         }
@@ -234,7 +290,7 @@ namespace AS_Assignment_2.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> ResendOtp()
         {
-            var userId = HttpContext.Session.GetString("2faUser Id");
+            var userId = HttpContext.Session.GetString("2faUserId");
             if (userId == null) return RedirectToAction("Login");
 
             var user = await _userManager.FindByIdAsync(userId);
@@ -258,6 +314,8 @@ namespace AS_Assignment_2.Controllers
             await StoreOtp(user.Id, newOtp);
             await _emailService.SendOtpEmailAsync(user.Email, newOtp);
 
+            HttpContext.Session.SetInt32("OtpAttempts", 0);
+
             // Update the last sent time in the session
             HttpContext.Session.SetString("LastOtpSentTime", DateTime.UtcNow.ToString());
 
@@ -275,7 +333,6 @@ namespace AS_Assignment_2.Controllers
                 var user = await _userManager.FindByIdAsync(userId);
                 if (user != null)
                 {
-                    // Optional: Invalidate current session ID on logout
                     user.CurrentSessionId = null;
                     await _userManager.UpdateAsync(user);
                 }
@@ -285,69 +342,6 @@ namespace AS_Assignment_2.Controllers
             await HttpContext.SignOutAsync("Identity.Application");
             HttpContext.Session.Clear();
             return RedirectToAction("Login");
-        }
-
-        [HttpGet]
-        [Authorize]
-        public IActionResult ChangePassword()
-        {
-            return View();
-        }
-
-        [HttpPost]
-        [Authorize]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ChangePassword(ChangePasswordModel model)
-        {
-            model.OldPassword = _sanitizer.Sanitize(model.OldPassword);
-            model.NewPassword = _sanitizer.Sanitize(model.NewPassword);
-
-            var user = await _userManager.GetUserAsync(User);
-
-            // Check minimum password age
-            if (user.LastPasswordChangeDate.AddDays(Double.Parse(_configuration["PasswordPolicy:MinimumAge"])) > DateTime.UtcNow)
-            {
-                ModelState.AddModelError("", "You cannot change password within 24 hours of last change");
-                return View(model);
-            }
-
-            // Get current password history
-            var existingPasswords = JsonConvert.DeserializeObject<List<string>>(user.PreviousPasswords ?? "[]");
-
-            // Check against password history
-            foreach (var oldHash in existingPasswords)
-            {
-                if (_userManager.PasswordHasher.VerifyHashedPassword(user, oldHash, model.NewPassword)
-                    == PasswordVerificationResult.Success)
-                {
-                    ModelState.AddModelError("", "Cannot reuse previous passwords");
-                    return View(model);
-                }
-            }
-
-            // Update password
-            var result = await _userManager.ChangePasswordAsync(user, model.OldPassword, model.NewPassword);
-            if (result.Succeeded)
-            {
-                // Update password history
-                var newHash = _userManager.PasswordHasher.HashPassword(user, model.NewPassword);
-
-                // Reuse existing list instead of redeclaring
-                existingPasswords.Add(newHash);
-                if (existingPasswords.Count > Double.Parse(_configuration["PasswordPolicy:PasswordHistory"])) existingPasswords.RemoveAt(0);
-
-                user.PreviousPasswords = JsonConvert.SerializeObject(existingPasswords);
-                user.LastPasswordChangeDate = DateTime.UtcNow;
-                await _userManager.UpdateAsync(user);
-
-                return RedirectToAction("Index", "Home");
-            }
-
-            foreach (var error in result.Errors)
-            {
-                ModelState.AddModelError("", error.Description);
-            }
-            return View(model);
         }
 
         [HttpGet]
@@ -379,19 +373,28 @@ namespace AS_Assignment_2.Controllers
         [HttpGet]
         public IActionResult ResetPasswordConfirm(string email, string token)
         {
+            // Add error handling for invalid tokens
             if (string.IsNullOrEmpty(token) || string.IsNullOrEmpty(email))
             {
                 return RedirectToAction("ResetPassword");
             }
 
-            // Additional token validation
             var user = _userManager.FindByEmailAsync(email).Result;
-            if (user == null || !_userManager.VerifyUserTokenAsync(user, TokenOptions.DefaultProvider, "ResetPassword", token).Result)
+            if (user == null || !_userManager.VerifyUserTokenAsync(user,
+                TokenOptions.DefaultProvider,
+                "ResetPassword",
+                token).Result)
             {
+                ModelState.AddModelError("", "Invalid password reset token");
                 return RedirectToAction("ResetPassword");
             }
 
-            return View(new ResetPasswordConfirmModel { Email = email, Token = token });
+            // Preserve parameters in the view
+            return View(new ResetPasswordConfirmModel
+            {
+                Email = email,
+                Token = token
+            });
         }
 
         [HttpPost]
@@ -417,6 +420,7 @@ namespace AS_Assignment_2.Controllers
                 return View(model);
             }
 
+
             // Check 2: Ensure new password is not in previous passwords
             var existingPasswords = JsonConvert.DeserializeObject<List<string>>(user.PreviousPasswords ?? "[]");
             foreach (var oldHash in existingPasswords)
@@ -428,6 +432,8 @@ namespace AS_Assignment_2.Controllers
                     return View(model);
                 }
             }
+
+
 
             // Proceed with password reset if checks pass
             var result = await _userManager.ResetPasswordAsync(user, model.Token, model.NewPassword);
@@ -441,7 +447,12 @@ namespace AS_Assignment_2.Controllers
                 user.LastPasswordChangeDate = DateTime.UtcNow;
                 await _userManager.UpdateAsync(user);
 
-                return View("ResetPasswordSuccess");
+
+                await HttpContext.SignOutAsync("Identity.Application");
+                HttpContext.Session.Clear();
+
+                await LogActivity(user.Id, "Update password");
+                return RedirectToAction("ResetPasswordSuccess");
             }
 
             foreach (var error in result.Errors)
@@ -449,6 +460,13 @@ namespace AS_Assignment_2.Controllers
                 ModelState.AddModelError("", error.Description);
             }
             return View(model);
+        }
+
+        [HttpGet]
+        public IActionResult ResetPasswordSuccess()
+        {
+            Console.WriteLine("YAY!!!");
+            return View();
         }
 
         [HttpGet]
@@ -475,6 +493,25 @@ namespace AS_Assignment_2.Controllers
             var user = await _userManager.FindByIdAsync(userId);
             if (user == null) return RedirectToAction("Login");
 
+            // Check 1: Ensure last password change was more than x day ago
+            if (user.LastPasswordChangeDate.AddDays(Double.Parse(_configuration["PasswordPolicy:MinimumAge"])) > DateTime.UtcNow)
+            {
+                ModelState.AddModelError("", "You cannot reset your password within 24 hours of the last change.");
+                return View(model);
+            }
+
+            // Check 2: Ensure new password is not in previous passwords
+            var existingPasswords = JsonConvert.DeserializeObject<List<string>>(user.PreviousPasswords ?? "[]");
+            foreach (var oldHash in existingPasswords)
+            {
+                if (_userManager.PasswordHasher.VerifyHashedPassword(user, oldHash, model.NewPassword)
+                    == PasswordVerificationResult.Success)
+                {
+                    ModelState.AddModelError("", "Cannot reuse previous passwords");
+                    return View(model);
+                }
+            }
+
             var result = await _userManager.ResetPasswordAsync(
                 user,
                 await _userManager.GeneratePasswordResetTokenAsync(user),
@@ -483,6 +520,8 @@ namespace AS_Assignment_2.Controllers
 
             if (result.Succeeded)
             {
+                await LogActivity(user.Id, "Update password");
+
                 // Generate new session ID
                 var newSessionId = Guid.NewGuid().ToString();
                 user.CurrentSessionId = newSessionId;
@@ -581,6 +620,17 @@ namespace AS_Assignment_2.Controllers
                 return true;
             }
             return false;
+        }
+
+        private async Task ClearOtpAndSession(string userId)
+        {
+            var existingOtps = await _context.Otps.Where(o => o.UserId == userId).ToListAsync();
+            _context.Otps.RemoveRange(existingOtps);
+            await _context.SaveChangesAsync();
+
+            HttpContext.Session.Remove("2faUserId");
+            HttpContext.Session.Remove("2faPending");
+            HttpContext.Session.Remove("OtpAttempts");
         }
     }
 }

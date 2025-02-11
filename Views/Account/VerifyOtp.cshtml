@@ -11,12 +11,12 @@
                     <div class="alert alert-info mb-4">
                         <i class="bi bi-envelope-check me-2"></i>
                         We've sent a verification code to
-                        <strong>@Html.Encode(ViewBag.Email)</strong>. 
+                        <strong>@Html.Encode(ViewBag.Email)</strong>.
                         <br>Check your inbox and enter the code below.
                     </div>
 
                     <form asp-action="VerifyOtp" method="post" autocomplete="off">
-                        @Html.AntiForgeryToken() 
+                        @Html.AntiForgeryToken()
 
                         <div class="mb-3">
                             <label class="form-label">Enter verification code</label>
@@ -29,7 +29,7 @@
                                    maxlength="6"
                                    inputmode="numeric"
                                    required
-                                   oninput="this.value = this.value.replace(/[^0-9]/g, '')"> 
+                                   oninput="this.value = this.value.replace(/[^0-9]/g, '')">
                         </div>
 
                         <div class="d-grid mb-3">
@@ -53,13 +53,13 @@
                     </form>
 
                     <div class="text-center mt-4">
-                        <small class="text-muted">
-                            Didn't receive the code?
-                            <form asp-action="ResendOtp" method="post" style="display:inline;">
-                                @Html.AntiForgeryToken()
+                        <form asp-action="ResendOtp" method="post" style="display:inline;">
+                            @Html.AntiForgeryToken()
+                            <small class="text-muted">
+                                Didn't receive the code?
                                 <button type="submit" class="btn btn-link p-0">Resend code</button>
-                            </form>
-                        </small>
+                            </small>
+                        </form>
                     </div>
                     @if (TempData["Message"] != null)
                     {
